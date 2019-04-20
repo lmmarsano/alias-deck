@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<title>Title</title>
+		<meta charset="utf-8">
+		<style>
+			@import url(https://fonts.googleapis.com/css?family=Yanone+Kaffeesatz);
+			@import url(https://fonts.googleapis.com/css?family=Droid+Serif:400,700,400italic);
+			@import url(https://fonts.googleapis.com/css?family=Ubuntu+Mono:400,700,400italic);
+
+			body { font-family: 'Droid Serif'; }
+			h1, h2, h3 {
+				font-family: 'Yanone Kaffeesatz';
+				font-weight: normal;
+			}
+			.remark-code, .remark-inline-code { font-family: 'Ubuntu Mono'; }
+		</style>
+	</head>
+	<body>
+		<textarea id="source">
+
+class: center, middle
+
+# Alias Utility
+## An Open Source Student Project
+
+---
+
+class: center, middle
+
+# Problem
+
+Substituting a console application with a script.
+
+---
+
+# Easy in POSIX OSs
+What’s my default editor?
+```ShellSession
+$ editor --version
+VIM - Vi IMproved 8.0 (2016 Sep 12, compiled Jun 05 2018 21:42:14)
+```
+
+Ugh, vi.
+Let’s switch to [the standard text editor][ed].
+```ShellSession
+$ echo $PATH
+/home/luism/bin:/home/luism/.local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+```
+
+`~/bin` comes earliest in my `PATH`.
+Let’s drop a substitute there.
+```ShellSession
+$ which editor
+/usr/bin/editor
+$ ln -s /bin/ed ~/bin/editor
+$ which editor
+/home/luism/bin/editor
+$ editor -V
+GNU ed 1.14.2
+```
+
+Cool. We can edit like it’s 1969.
+
+---
+
+# Windows Fails: Part 1
+Windows doesn’t work this way.
+Sometimes it’d be nicer if it did.
+Example:
+![Error: git not found. Install it or configure it using the git.path setting.][git-not-found]
+
+Visual Studio Code can’t find git, which is [`wsl git`][wsl] on my system.
+Let’s fix that.
+```ShellSession
+> git
+git : The term 'git' is not recognized as the name of a cmdlet, function, script file, or operable program. Check the spelling of the name, or if a path was included, verify that the path is correct and try again.
+> $env:Path
+C:\Users\luism\path;C:\WINDOWS\system32;C:\WINDOWS;C:\WINDOWS\System32\Wbem;C:\WINDOWS\System32\WindowsPowerShell\v1.0\;C:\Open\path
+> 'wsl git %*' | Set-Content -Path ~\path\git.cmd
+> git --version
+git version 2.20.1
+```
+
+Code still doesn’t work.
+
+---
+
+# Windows Fails: Part 2
+Let’s tell Code directly.
+![Git path: path &amp; filename of the git executable. Edit in settings.json][git-path]
+
+Code won’t accept a compound command (`wsl git`), so let’s feed it the script.
+```json
+{ "git.path": "${env:USERPROFILE}\\path\\git.cmd" }
+```
+
+That’s executable, right?
+Until recently, [Code didn’t think so][script-issue].
+Code is not unique: too many applications assume executables end in `.exe`.
+
+How do we coax Code to run `wsl git` anyway?
+We could make an `.exe` that runs a command.
+But why stop there?
+Could we make an `.exe` run all commands?
+
+---
+
+# Using Alias
+
+Let’s cleanup &amp; fetch the solution.
+```ShellSession
+> Set-Location -Path ~\path
+> Remove-Item -Path git.cmd
+> Start-BitsTransfer -Source https://github.com/lmmarsano/alias/releases/latest/download/alias-win-x64.zip
+> Expand-Archive -Path alias-win-x64.zip
+> Remove-Item -Path alias-win-x64.zip
+```
+
+Now to configure &amp; link it.
+```ShellSession
+> Alias set git wsl git
+> New-Item -Type HardLink -Name git.exe -Value Alias.exe
+    Directory: C:\Users\luism\path
+Mode                LastWriteTime         Length Name
+----                -------------         ------ ----
+-a----        4/17/2019   3:32 AM         320512 git.exe
+> git --version
+git version 2.20.1
+```
+
+A real `.exe`, which Code detects!
+
+---
+
+# Open Source
+
+Free &amp; libre.
+Everyone is welcome to reuse &amp develop the code as long as they keep it open.
+- [GitHub: lmmarsano/alias][repository]
+## Design Goals
+
+- Minimal: meant to do 1 thing well. Functions other utilities already perform well should be reserved to those utilities.
+- Cross-platform: should run on Windows &amp POSIX. New features should function across all operating systems.
+
+---
+
+## Implementation
+
+C♯ 8 features
+- Use static types that exclude null. `Directory.build.props`:
+	```xml
+	<NullableContextOptions>enable</NullableContextOptions>
+	```
+
+	Null is a programming language anti-pattern.
+	The inventor of null, Tony Hoare, calls it his [billion-dollar mistake][nullable].
+	Who likes to check for null constantly?
+
+Static typing is your friend: treat nulls &amp; exceptions through static typing
+- [Haskell][haskell]-inspired types
+	- `Maybe a = Nothing | Just a`
+	- `Result a = Ok a | Error System.Exception`
+- identify [monadic bind][monad] `>>=` with [Linq SelectMany][projection] method
+
+[ed]: https://www.gnu.org/fun/jokes/ed.msg.html
+[git-not-found]: ./image/git-not-found.png
+[wsl]: https://docs.microsoft.com/en-us/windows/wsl/
+[git-path]: ./image/git-path.png
+[script-issue]: https://github.com/Microsoft/vscode/issues/32044
+[nullable]: https://devblogs.microsoft.com/dotnet/nullable-reference-types-in-csharp/
+[repository]: https://github.com/lmmarsano/alias
+[haskell]: https://www.haskell.org/
+[monad]: https://wiki.haskell.org/Monad
+[projection]: https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/linq/projection-operations
+		</textarea>
+		<script src="https://remarkjs.com/downloads/remark-latest.min.js">
+		</script>
+		<script>
+			var slideshow = remark.create();
+		</script>
+	</body>
+</html>
